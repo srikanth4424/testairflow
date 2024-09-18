@@ -1,0 +1,193 @@
+
+Step-by-Step Guide to Running Apache Airflow with Docker and Integrating an Existing Spark Master-Slave Cluster
+
+1. Install Docker and Docker Compose
+-------------------------------------------------
+Ensure that Docker and Docker Compose are installed on your system.
+
+To check if they are installed:
+```bash
+docker --version
+docker-compose --version
+```
+
+If not installed, follow the official installation instructions for Docker and Docker Compose:
+- Docker: https://docs.docker.com/get-docker/
+- Docker Compose: https://docs.docker.com/compose/install/
+
+
+2. Create a Docker Compose File for Airflow
+-------------------------------------------------
+Create a directory for Airflow, and inside that directory, create a `docker-compose.yaml` file with the following content:
+
+```yaml
+version: '3'
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  webserver:
+    image: apache/airflow:2.5.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'YOUR_FERNET_KEY'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    command: webserver
+
+  scheduler:
+    image: apache/airflow:2.5.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'YOUR_FERNET_KEY'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    depends_on:
+      - postgres
+    command: scheduler
+
+  worker:
+    image: apache/airflow:2.5.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'YOUR_FERNET_KEY'
+    depends_on:
+      - postgres
+    command: worker
+
+volumes:
+  postgres_data:
+```
+
+3. Generate a Fernet Key
+-------------------------------------------------
+To encrypt sensitive data such as connections, generate a Fernet key:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Replace `'YOUR_FERNET_KEY'` in the `docker-compose.yaml` with the generated key.
+
+
+4. Initialize the Airflow Metadata Database
+-------------------------------------------------
+Before starting Airflow, you need to initialize the metadata database:
+
+```bash
+docker-compose up airflow-init
+```
+
+This will create the necessary tables in the PostgreSQL database for Airflow.
+
+
+5. Start the Airflow Services
+-------------------------------------------------
+Once the database is initialized, start the Airflow services using Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+This will start the Airflow web server, scheduler, and worker along with the PostgreSQL database.
+
+
+6. Access the Airflow Web UI
+-------------------------------------------------
+After the services are up, you can access the Airflow web UI by navigating to:
+
+`http://localhost:8080`
+
+The default login credentials are:
+- Username: `airflow`
+- Password: `airflow`
+
+
+7. Integrating Spark Master-Slave Cluster with Airflow
+-------------------------------------------------
+
+If you already have a Spark cluster running, you just need to configure Airflow to connect to your Spark master.
+
+**Step 1**: Get your Spark master URL (it will typically look like this):
+```
+spark://<spark-master-host>:7077
+```
+
+**Step 2**: Configure Airflow to Connect to Spark Master
+
+- **Option 1**: Using Airflow UI
+    - Go to **Admin > Connections** in Airflow UI.
+    - Add a new connection:
+        - Connection ID: `spark_default`
+        - Connection Type: `Spark`
+        - Host: `<spark-master-host>`
+        - Port: `7077`
+
+- **Option 2**: Using `docker-compose.yaml`
+    Add the following line in the `webserver` service under the environment section:
+
+    ```yaml
+    environment:
+      AIRFLOW_CONN_SPARK_DEFAULT: 'spark://<spark-master-host>:7077'
+    ```
+
+**Step 3**: Create a DAG to Submit Spark Jobs
+
+Create a new DAG using `SparkSubmitOperator`. Here's an example:
+
+```python
+from airflow import DAG
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from datetime import datetime
+
+default_args = {
+    'start_date': datetime(2023, 9, 1),
+    'catchup': False,
+}
+
+dag = DAG(
+    'spark_job_dag',
+    default_args=default_args,
+    schedule_interval='@daily',
+)
+
+spark_task = SparkSubmitOperator(
+    task_id='spark_submit_job',
+    application='local:///opt/spark/examples/jars/spark-examples_2.11-2.4.5.jar',
+    conn_id='spark_default',
+    verbose=True,
+    conf={
+        'spark.executor.memory': '2g',
+        'spark.executor.instances': '2',
+        'spark.master': 'spark://<spark-master-host>:7077',
+    },
+    dag=dag,
+)
+
+spark_task
+```
+
+**Step 4**: Run the DAG in Airflow
+
+Once the DAG is added to your Airflow `dags/` folder, you can:
+1. Go to the **Airflow Web UI** (`http://localhost:8080`).
+2. Enable the DAG (`spark_job_dag`).
+3. Trigger the DAG manually or wait for the scheduled run.
+
+---
+
+Summary:
+- **Docker Compose for Airflow**: This sets up Apache Airflow in Docker containers using Docker Compose.
+- **Spark Integration**: Airflow is configured to submit jobs to your running Spark master-slave cluster via the `SparkSubmitOperator`.
+
