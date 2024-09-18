@@ -91,3 +91,44 @@ The default login credentials are:
 
 Username: airflow
 Password: airflow
+
+######################################################
+
+Create Spark Connection:
+Go to Admin > Connections.
+Click on "+ Add a new record".
+Fill out the form with the following:
+Connection ID: spark_default
+Connection Type: Spark
+Host: spark://<spark-master-host> (use your actual Spark master host).
+Port: 7077.
+Click Save.
+Option 2: Configure via Airflow Configuration (Programmatically)
+You can also define the Spark connection in the airflow.cfg file or as an environment variable.
+
+Using the airflow.cfg file:
+
+Open the airflow.cfg file located in $AIRFLOW_HOME/airflow.cfg.
+Add the following to define the Spark connection:
+ini
+Copy code
+[connections]
+spark_default = spark://<spark-master-host>:7077
+Replace <spark-master-host> with your actual Spark master hostname or IP address.
+Using Environment Variables: You can define the connection using environment variables. Add the following environment variable to your system:
+
+bash
+Copy code
+export AIRFLOW_CONN_SPARK_DEFAULT='spark://<spark-master-host>:7077'
+3. Install Apache Spark Provider (If Not Installed)
+To use the SparkSubmitOperator, make sure you have the Spark provider installed. Since you've mentioned installing the provider during setup, verify it with:
+
+bash
+Copy code
+pip list | grep apache-airflow-providers-apache-spark
+If it's not installed, install it with the following command:
+
+bash
+Copy code
+pip install apache-airflow-providers-apache-spark
+
