@@ -163,4 +163,23 @@ fi
 
 
 -----------------------
+#airflow.cfg
+[core]
+executor = LocalExecutor
+sql_alchemy_conn = ${SQL_ALCHEMY_CONN}
+dags_folder = ${AIRFLOW_HOME}/dags
+base_log_folder = ${AIRFLOW_HOME}/logs
+airflow_home = ${AIRFLOW_HOME}
+
+[webserver]
+web_server_port = 8080
+
+[logging]
+base_log_folder = ${AIRFLOW_HOME}/logs
+remote_logging = False
+
+[scheduler]
+scheduler_heartbeat_sec = 5
+max_threads = 2
+
 
