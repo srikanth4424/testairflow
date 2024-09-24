@@ -99,3 +99,52 @@ VOLUME ["/var/lib/postgresql/data"]
 # Run PostgreSQL
 CMD ["postgres", "-D", "/var/lib/postgresql/data", "-c", "config_file=/etc/postgresql/postgresql.conf"]
 
+-----------------------------
+
+# PostgreSQL configuration file
+# -----------------------------
+# This is a basic configuration. You can modify settings as per your needs.
+
+# Connection settings
+listen_addresses = '*'          # Listen on all interfaces
+port = 5432                     # Default PostgreSQL port
+
+# Memory settings
+shared_buffers = 128MB           # Amount of memory dedicated to shared buffers
+work_mem = 4MB                   # Memory per query operation
+
+# Logging settings
+logging_collector = on           # Enable logging
+log_directory = 'pg_log'         # Log directory
+log_filename = 'postgresql-%Y-%m-%d.log' # Log file name
+log_statement = 'all'            # Log all SQL statements
+
+# Replication settings
+max_wal_size = 1GB
+min_wal_size = 80MB
+
+# Checkpoint settings
+checkpoint_completion_target = 0.7
+
+# Client connection settings
+max_connections = 100            # Max connections to the DB
+
+
+-------------------------------
+
+ENV PGDATA=/var/lib/postgresql/data
+
+# Ensure correct ownership and permissions
+RUN mkdir -p /var/lib/postgresql/data && \
+    chown -R postgres:postgres /var/lib/postgresql && \
+    chmod -R 755 /var/lib/postgresql
+
+# Set working directory for PostgreSQL
+WORKDIR /var/lib/postgresql/data
+
+# Copy custom PostgreSQL config file
+
+----------------------
+
+CMD ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+
