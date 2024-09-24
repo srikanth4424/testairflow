@@ -93,6 +93,15 @@ ENV AIRFLOW_HOME=/opt/airflow
 # Set the default shell to bash and disable interactive prompts for apt-get
 SHELL ["/bin/bash", "-c"]
 ARG DEBIAN_FRONTEND=noninteractive
+ARG AIRFLOW_HOME
+ARG SQL_ALCHEMY_CONN
+
+# Set environment variables from build args
+ENV AIRFLOW_HOME=${AIRFLOW_HOME}
+ENV SQL_ALCHEMY_CONN=${SQL_ALCHEMY_CONN}
+
+# Rest of your Dockerfile...
+#export $(cat .env | xargs) && docker build --build-arg AIRFLOW_HOME --build-arg SQL_ALCHEMY_CONN -t airflow-latest .
 
 # Update Ubuntu and install necessary packages
 RUN apt-get update && apt-get install -y \
@@ -166,10 +175,13 @@ fi
 #airflow.cfg
 [core]
 executor = LocalExecutor
-sql_alchemy_conn = ${SQL_ALCHEMY_CONN}
 dags_folder = ${AIRFLOW_HOME}/dags
 base_log_folder = ${AIRFLOW_HOME}/logs
 airflow_home = ${AIRFLOW_HOME}
+
+[database]
+# Moved from [core] section
+sql_alchemy_conn = ${SQL_ALCHEMY_CONN}
 
 [webserver]
 web_server_port = 8080
