@@ -47,3 +47,55 @@ VOLUME ["/var/lib/postgresql/data"]
 
 # Run the PostgreSQL service
 CMD ["/usr/lib/postgresql/12/bin/postgres", "-D", "/var/lib/postgresql/12/main", "-c", "config_file=/etc/postgresql/12/main/postgresql.conf"]
+
+
+0--------------------------------
+
+
+# Use the official Ubuntu base image
+FROM ubuntu:20.04
+
+# Set environment variables for non-interactive installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update and install PostgreSQL
+RUN apt-get update && apt-get install -y \
+    postgresql postgresql-contrib \
+    locales sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure locales
+RUN locale-gen en_US.UTF-8  
+ENV LANG en_US.UTF-8  
+ENV LANGUAGE en_US:en  
+ENV LC_ALL en_US.UTF-8
+
+# Set up PostgreSQL user and password
+ARG POSTGRES_USER=airflow
+ARG POSTGRES_PASSWORD=airflow
+ARG POSTGRES_DB=airflow_db
+
+# Expose the PostgreSQL port
+EXPOSE 5432
+
+# Ensure PostgreSQL is running and configure the user and database
+RUN service postgresql start \
+    && sudo -u postgres psql -c "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';" \
+    && sudo -u postgres psql -c "CREATE DATABASE $POSTGRES_DB OWNER $POSTGRES_USER;" \
+    && sudo -u postgres psql -c "ALTER USER $POSTGRES_USER CREATEDB;"
+
+# Update pg_hba.conf and postgresql.conf
+RUN sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/*/main/postgresql.conf \
+    && echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/*/main/pg_hba.conf
+
+# Set environment variables for PostgreSQL connection
+ENV POSTGRES_USER=$POSTGRES_USER
+ENV POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+ENV POSTGRES_DB=$POSTGRES_DB
+
+# Create a volume to persist data
+VOLUME ["/var/lib/postgresql/data"]
+
+# Run PostgreSQL
+CMD ["postgres", "-D", "/var/lib/postgresql/data", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+
