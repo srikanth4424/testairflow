@@ -1,0 +1,98 @@
+# Use Ubuntu as the base image
+FROM ubuntu:22.04
+
+# Set environment variables for PostgreSQL
+ENV POSTGRES_USER=airflow
+ENV POSTGRES_PASSWORD=airflow
+ENV POSTGRES_DB=airflow_db
+
+# Set the locale for PostgreSQL
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+# Install necessary packages and PostgreSQL
+RUN apt-get update && \
+    apt-get install -y \
+    wget \
+    gnupg2 \
+    locales && \
+    locale-gen en_US.UTF-8 && \
+    apt-get install -y sudo
+
+# Add PostgreSQL repository
+RUN echo "deb [trusted=yes] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | tee /etc/apt/sources.list.d/pgdg.list && \
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+
+# Install PostgreSQL
+RUN apt-get update && \
+    apt-get install -y \
+    postgresql-14 \
+    postgresql-contrib-14
+
+# Allow access and set proper ownership and permissions
+RUN mkdir -p /var/lib/postgresql/data && \
+    chown -R postgres:postgres /var/lib/postgresql && \
+    chmod -R 755 /var/lib/postgresql
+
+# Copy configuration files for PostgreSQL
+COPY postgresql.conf /etc/postgresql/14/main/postgresql.conf
+COPY pg_hba.conf /etc/postgresql/14/main/pg_hba.conf
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Set up volumes to persist PostgreSQL data
+VOLUME ["/var/lib/postgresql/data"]
+
+# Switch to the postgres user and initialize the database
+USER postgres
+
+# Create the airflow user and database
+RUN /usr/lib/postgresql/14/bin/initdb -D /var/lib/postgresql/data && \
+    /usr/lib/postgresql/14/bin/pg_ctl start -D /var/lib/postgresql/data && \
+    psql -c "CREATE USER ${POSTGRES_USER} WITH PASSWORD '${POSTGRES_PASSWORD}';" && \
+    psql -c "CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER};" && \
+    psql -c "ALTER USER ${POSTGRES_USER} CREATEDB;"
+
+# Start PostgreSQL server with the configuration
+CMD ["postgres", "-D", "/var/lib/postgresql/data", "-c", "config_file=/etc/postgresql/14/main/postgresql.conf"]
+
+
+-------------------------------
+
+
+# Connection settings
+listen_addresses = '*'
+port = 5432
+
+# Resource and memory configuration (adjust based on your system's memory)
+shared_buffers = 128MB
+work_mem = 4MB
+maintenance_work_mem = 64MB
+
+# Logging
+logging_collector = on
+log_directory = 'pg_log'
+log_filename = 'postgresql-%Y-%m-%d.log'
+log_truncate_on_rotation = on
+log_rotation_age = 1d
+log_rotation_size = 0
+log_min_duration_statement = 1000
+
+# Other settings can be added as needed
+
+
+----------------------
+
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Allow local connections
+local   all             postgres                                peer
+local   all             all                                     md5
+
+# IPv4 local connections:
+host    all             all             0.0.0.0/0               md5
+
+# IPv6 local connections:
+host    all             all             ::/0                    md5
