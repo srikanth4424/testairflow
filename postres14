@@ -96,3 +96,47 @@ host    all             all             0.0.0.0/0               md5
 
 # IPv6 local connections:
 host    all             all             ::/0                    md5
+
+------------------
+
+
+# Copy the entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Make the entrypoint script executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Set the entrypoint to execute the script
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+
+--------
+
+#!/bin/bash
+set -e
+
+# Start PostgreSQL in the background
+echo "Starting PostgreSQL..."
+service postgresql start
+
+# Create the airflow user and database if they don't already exist
+if ! psql -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='airflow'" | grep -q 1; then
+    echo "Creating user 'airflow'..."
+    psql -U postgres -c "CREATE USER airflow WITH PASSWORD 'airflow';"
+fi
+
+if ! psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='airflow_db'" | grep -q 1; then
+    echo "Creating database 'airflow_db'..."
+    psql -U postgres -c "CREATE DATABASE airflow_db OWNER airflow;"
+fi
+
+# Restart PostgreSQL to apply changes
+echo "Restarting PostgreSQL..."
+service postgresql restart
+
+# Keep PostgreSQL running in the foreground
+exec postgres -D /var/lib/postgresql/data -c config_file=/etc/postgresql/14/main/postgresql.conf
+
