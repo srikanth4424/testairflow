@@ -114,6 +114,11 @@ RUN apt-get update && apt-get install -y \
     curl \
     netcat
 
+# Create airflow user and group
+RUN groupadd -r airflow \
+    && useradd -r -g airflow -d $AIRFLOW_HOME -s /sbin/nologin airflow \
+    && mkdir -p $AIRFLOW_HOME \
+    && chown -R airflow:airflow $AIRFLOW_HOME
 # Create the Airflow home directory
 RUN mkdir -p $AIRFLOW_HOME
 
@@ -139,9 +144,15 @@ RUN source $AIRFLOW_HOME/venv/bin/activate && \
 # Expose the necessary Airflow ports (8080 for webserver)
 EXPOSE 8080
 
-# Copy the entrypoint script to manage starting the services
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+
+# Set permissions for the airflow user on Airflow home
+RUN chmod -R +rwx $AIRFLOW_HOME
+
+# Set permissions for the entrypoint script and change ownership
+RUN chmod +x /entrypoint.sh \
+    && chown airflow:airflow /entrypoint.sh
+
+USER airflow
 
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
