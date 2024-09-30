@@ -132,3 +132,23 @@ bash
 Copy code
 pip install apache-airflow-providers-apache-spark
 
+---------------------------------------------
+
+ environment:
+      AIRFLOW_ADMIN_USERNAME: admin
+      AIRFLOW_ADMIN_PASSWORD: adminpassword
+      AIRFLOW_ADMIN_FIRSTNAME: Admin
+      AIRFLOW_ADMIN_LASTNAME: User
+      AIRFLOW_ADMIN_EMAIL: admin@example.com
+      AIRFLOW_ROLE: webserver
+      
+-------------------
+
+airflow users create \
+    --username ${AIRFLOW_ADMIN_USERNAME:-admin} \
+    --firstname ${AIRFLOW_ADMIN_FIRSTNAME:-Admin} \
+    --lastname ${AIRFLOW_ADMIN_LASTNAME:-User} \
+    --role Admin \
+    --email ${AIRFLOW_ADMIN_EMAIL:-admin@example.com} \
+    --password ${AIRFLOW_ADMIN_PASSWORD:-admin}
+
