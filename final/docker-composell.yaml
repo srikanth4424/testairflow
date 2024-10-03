@@ -1,0 +1,79 @@
+
+version: '3'
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - airflow_network
+
+  redis:
+    image: redis:latest
+    networks:
+      - airflow_network
+
+  airflow-webserver:
+    build:
+      context: .
+    dockerfile: Dockerfile.web
+    environment:
+      - AIRFLOW_ROLE=webserver
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOST_LOGS_PATH}:/opt/airflow/logs
+      - ${HOST_DAGS_PATH}:/opt/airflow/dags
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - airflow_network
+
+  airflow-scheduler:
+    build:
+      context: .
+    dockerfile: Dockerfile.scheduler
+    environment:
+      - AIRFLOW_ROLE=scheduler
+    env_file:
+      - .env
+    volumes:
+      - ${HOST_LOGS_PATH}:/opt/airflow/logs
+      - ${HOST_DAGS_PATH}:/opt/airflow/dags
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - airflow_network
+
+  airflow-worker:
+    build:
+      context: .
+    dockerfile: Dockerfile.worker
+    environment:
+      - AIRFLOW_ROLE=worker
+    env_file:
+      - .env
+    volumes:
+      - ${HOST_LOGS_PATH}:/opt/airflow/logs
+      - ${HOST_DAGS_PATH}:/opt/airflow/dags
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - airflow_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  airflow_network:
+    driver: bridge

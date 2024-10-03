@@ -1,0 +1,21 @@
+
+# Airflow home directory
+AIRFLOW_HOME=/opt/airflow
+
+# PostgreSQL connection
+POSTGRES_USER=airflow
+POSTGRES_PASSWORD=airflow
+POSTGRES_DB=airflow_db
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+
+# Celery Broker (Redis)
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=db+postgresql://airflow:airflow@postgres:5432/airflow_db
+
+# Host paths for DAGs and Logs
+HOST_DAGS_PATH=/opt/airflow/dags
+HOST_LOGS_PATH=/opt/airflow/logs
+
+# Redis Host
+REDIS_HOST=redis
