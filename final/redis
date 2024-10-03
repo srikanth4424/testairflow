@@ -1,0 +1,53 @@
+# Use Ubuntu as the base image
+FROM ubuntu:20.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Redis from the official Ubuntu repositories
+RUN apt-get update && apt-get install -y \
+    redis-server \
+    curl \
+    wget \
+    ca-certificates \
+    && apt-get clean
+
+# Create the Redis configuration directory
+RUN mkdir /etc/redis
+
+# Copy Redis default configuration (optional, or use default one)
+COPY redis.conf /etc/redis/redis.conf
+
+# Expose Redis default port
+EXPOSE 6379
+
+# Start Redis using the configuration file
+CMD ["redis-server", "/etc/redis/redis.conf"]
+
+
+----------
+
+redis.conf
+
+# Redis configuration file
+
+# Accept connections from all interfaces
+bind 0.0.0.0
+
+# Port for Redis to listen on
+port 6379
+
+# Daemonize (Run in the background)
+daemonize no
+
+# Log level
+loglevel notice
+
+# Save DB on certain number of changes in a specific timeframe
+save 900 1
+save 300 10
+save 60 10000
+
+# Maximum memory policy (optional)
+# maxmemory <bytes>
+# maxmemory-policy noeviction
