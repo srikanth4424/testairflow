@@ -1,0 +1,33 @@
+
+FROM ubuntu
+USER root
+
+ENV AIRFLOW_HOME=/opt/airflow
+ENV TZ=UTC
+
+WORKDIR $AIRFLOW_HOME
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get update \
+    && apt-get install -y curl postgresql-client build-essential software-properties-common python3.10 python3.10-venv python3.10-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r airflow \
+    && useradd -r -g airflow -d $AIRFLOW_HOME -s /bin/nologin airflow \
+    && mkdir -p $AIRFLOW_HOME \
+    && chown -R airflow:airflow $AIRFLOW_HOME
+
+RUN python3 -m venv $AIRFLOW_HOME/venv
+RUN source $AIRFLOW_HOME/venv/bin/activate && pip install --upgrade pip
+
+# Install scheduler specific components
+RUN source $AIRFLOW_HOME/venv/bin/activate && \
+    pip install apache-airflow[postgres]==2.8.0
+
+COPY entrypoint_scheduler.sh /entrypoint.sh
+COPY airflow.cfg /opt/airflow/airflow.cfg
+RUN chmod +x /entrypoint.sh && chown airflow:airflow /entrypoint.sh
+
+USER airflow
+ENTRYPOINT ["/entrypoint.sh"]
