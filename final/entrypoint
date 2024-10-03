@@ -1,0 +1,26 @@
+#!/bin/bash
+airflow db init
+
+#create airflow UI user
+airflow users create \
+  --username ${AIRFLOW_ADMIN_USERNAME:-admin} \
+  --firstname ${AIRFLOW_ADMIN_FIRSTNAME:-Admin} \
+  --lastname ${AIRFLOW_ADMIN_LASTNAME:-User} \
+  --role Admin \
+  --email ${AIRFLOW_ADMIN_EMAIL:-admin@example.com} \
+  --password ${AIRFLOW_ADMIN_PASSWORD:-Airflowtest}
+
+# Check the role and start the appropriate service
+if [ "$AIRFLOW_ROLE" = "webserver" ]; then
+  echo "Starting Airflow Webserver..."
+  exec airflow webserver --port 8080
+elif [ "$AIRFLOW_ROLE" = "scheduler" ]; then
+  echo "Starting Airflow Scheduler..."
+  exec airflow scheduler
+elif [ "$AIRFLOW_ROLE" = "worker" ]; then
+  echo "Starting Airflow Worker..."
+  exec airflow celery worker
+else
+  echo "No valid AIRFLOW_ROLE specified, exiting."
+  exit 1
+fi
