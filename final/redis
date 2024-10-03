@@ -18,6 +18,12 @@ RUN mkdir /etc/redis
 # Copy Redis default configuration (optional, or use default one)
 COPY redis.conf /etc/redis/redis.conf
 
+# Create a non-root user 'redis' and set permissions
+RUN useradd -ms /bin/bash redis \
+    && mkdir /var/lib/redis \
+    && chown redis:redis /var/lib/redis \
+    && chmod 770 /var/lib/redis
+
 # Expose Redis default port
 EXPOSE 6379
 
