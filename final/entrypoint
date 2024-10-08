@@ -24,3 +24,12 @@ else
   echo "No valid AIRFLOW_ROLE specified, exiting."
   exit 1
 fi
+
+
+Airflow lacks the capability to upload files via the user interface. The sole method for adding files is by copying or moving them to the DAG folder. While this folder can be linked to a NAS storage, the question arises as to how users will upload files to the NAS. Two potential options are as follows:
+
+1. Should we consider developing a custom Python application with a simple user interface that facilitates file uploads to the NAS?
+2. Should we explore the possibility of implementing Git or SFTP on the NAS folder to enable file uploads?
+
+
+We use the official Helm charts but need confirmation on one major component value. Should we use the Celery Executor or Kubernetes Executor? I have outlined the differences in an email for your quick reference.
